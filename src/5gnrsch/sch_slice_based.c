@@ -78,10 +78,7 @@ uint8_t schSliceBasedCellCfgReq(SchCellCb *cellCb)
    cmLListInit(&schSpcCellCb->sliceCbList);
    cellCb->schSpcCell = (void *)schSpcCellCb;
 
-   schSpcCellCb->timer_sec = 0;
-   schSpcCellCb->slot_ind_count = 0;
-   schSpcCellCb->algoDelay = 0;
-   schSpcCellCb->isTimerStart = false;
+
    return ROK;
 }
 
@@ -212,11 +209,12 @@ void SchSliceBasedSliceCfgReq(SchCellCb *cellCb)
    uint8_t tempAlgoSelection = 0;
    uint8_t threadCounter = 0;
    uint8_t threadRes;
+   uint8_t threadmax = 16;
    schSpcCell = (SchSliceBasedCellCb *)cellCb->schSpcCell;
    storedSliceCfg = &schCb[cellCb->instIdx].sliceCfg;
    sliceCfg = storedSliceCfg->first;
    
-   SchSliceBasedDlThreadArg *threadArg[schSpcCell->sliceCbList.count];
+   SchSliceBasedDlThreadArg *threadArg[threadmax];
    pthread_t intraSliceThread[schSpcCell->sliceCbList.count];
 
    while(sliceCfg)
@@ -242,7 +240,10 @@ void SchSliceBasedSliceCfgReq(SchCellCb *cellCb)
          addNodeToLList(&schSpcCell->sliceCbList, sliceCbToStore, NULL);
 
          tempAlgoSelection++;
-
+         if(threadCounter > threadmax)
+         {
+            DU_LOG("\nERROR  -->  Execution thread exceeds limit");
+         }
 #ifdef SCH_MULTI_THREAD
          /* Create thread in initialization */
          SCH_ALLOC(schSpcCell->threadArg[threadCounter], sizeof(SchSliceBasedDlThreadArg));
