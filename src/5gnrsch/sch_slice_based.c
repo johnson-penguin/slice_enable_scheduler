@@ -317,11 +317,11 @@ void SchSliceBasedSliceRecfgReq(SchCellCb *cellCb)
    
    while(sliceCfg)
    {
-      rrmPolicyNode = (SchRrmPolicyOfSlice *)sliceCfg->node;
+      rrmPolicyNode = (SchRrmPolicyOfSlice *)sliceCfg->sliceCbList;
 
       while(sliceCbList)
       {
-         sliceCbNode = (SchSliceBasedSliceCb *)sliceCbList->node;
+         sliceCbNode = (SchSliceBasedSliceCb *)sliceCbList->sliceCbList;
 
          if(memcmp(&rrmPolicyNode->snssai, &sliceCbNode->snssai, sizeof(Snssai)) == 0)
          {
@@ -1592,7 +1592,7 @@ uint8_t schSliceBasedFillLcInfoToSliceCb(CmLListCp *sliceCbList, SchUeCb *ueCb)
             }
          }
       }
-      schSliceBasedSortLcByPriorLevel(&sliceCb->lcInfoList[ueId-1], totalPriorLevel);
+
 
       sliceCbNode = sliceCbNode->next;
       totalPriorLevel = 0;
@@ -1907,7 +1907,16 @@ bool schSliceBasedDlScheduling(SchCellCb *cell, SlotTimingInfo currTime, uint8_t
    /* [Step4]: Search the largest free PRB block to do the scheduling */
    maxFreePRB = searchLargestFreeBlock(ueNewHarqList[ueId-1]->hqEnt->cell, pdschTime, &startPrb, DIR_DL);
    totalRemainingPrb = maxFreePRB;
-   
+
+
+   if(maxFreePRB == 0)
+   {
+      memset(dciSlotAlloc, 0, sizeof(DlMsgSchInfo));
+       /* No available resources remaining */
+      return false
+   }   
+
+
    /* [Step5]: Traverse each slice to do the intra-slice scheduling individually */
    if (isRetx == FALSE)
    {
