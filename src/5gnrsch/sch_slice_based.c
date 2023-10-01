@@ -2016,7 +2016,7 @@ uint8_t schSliceBasedDlIntraSliceScheduling(SchCellCb *cellCb, SlotTimingInfo pd
                                             CmLListCp *ueDlNewTransmission, uint16_t maxFreePRB, uint16_t *totalRemainingPrb,\
                                             SchSliceBasedSliceCb *sliceCb)
 {  
-   uint16_t crnti = 0;
+
    uint16_t minimumPrb = 0, remainingPrb = 0;
    SchUeCb *ueCb = NULLP;
    uint8_t  ueId;
@@ -4096,8 +4096,7 @@ void schSliceBasedRoundRobinAlgo(SchCellCb *cellCb, CmLListCp *ueList, CmLListCp
          ueNode = ueNode->next;
       }
 
-      /* Sort the cascade LC Info List in terms of priority level */
-      schSliceBasedSortLcByPriorLevel(&casLcInfoList, 1);
+
 
       /* Allocate the resouce for cascade LC Info list */
       schSliceBasedRoundRobinAlgoforLc(&casLcInfoList, numSymbols, availablePrb, \
@@ -4158,7 +4157,6 @@ void schSliceBasedWeightedFairQueueAlgo(SchCellCb *cellCb, CmLListCp *ueList, Cm
    uint16_t ueQuantum, remainingPrb, totalAvaiPrb;
    float_t totalPriorityLevel = 0;
 
-   totalAvaiPrb = *availablePrb;
    
    ueNode = ueList->first;
 
@@ -4242,7 +4240,7 @@ void schSliceBasedWeightedFairQueueAlgo(SchCellCb *cellCb, CmLListCp *ueList, Cm
    }
    else
    {
-      DU_LOG("\n In schSliceBasedRoundRobinAlgo(), invalid algoMethod");
+      DU_LOG("\n In schSliceBasedWeightedFairQueueAlgo(), invalid algoMethod");
    }
 }
 
