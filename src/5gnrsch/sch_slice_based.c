@@ -209,12 +209,11 @@ void SchSliceBasedSliceCfgReq(SchCellCb *cellCb)
    uint8_t tempAlgoSelection = 0;
    uint8_t threadCounter = 0;
    uint8_t threadRes;
-   uint8_t threadmax = 16;
    schSpcCell = (SchSliceBasedCellCb *)cellCb->schSpcCell;
    storedSliceCfg = &schCb[cellCb->instIdx].sliceCfg;
    sliceCfg = storedSliceCfg->first;
    
-   SchSliceBasedDlThreadArg *threadArg[threadmax];
+   SchSliceBasedDlThreadArg *threadArg[schSpcCell->sliceCbList.count];
    pthread_t intraSliceThread[schSpcCell->sliceCbList.count];
 
    while(sliceCfg)
@@ -240,10 +239,7 @@ void SchSliceBasedSliceCfgReq(SchCellCb *cellCb)
          addNodeToLList(&schSpcCell->sliceCbList, sliceCbToStore, NULL);
 
          tempAlgoSelection++;
-         if(threadCounter > threadmax)
-         {
-            DU_LOG("\nERROR  -->  Execution thread exceeds limit");
-         }
+
 #ifdef SCH_MULTI_THREAD
          /* Create thread in initialization */
          SCH_ALLOC(schSpcCell->threadArg[threadCounter], sizeof(SchSliceBasedDlThreadArg));
@@ -308,7 +304,7 @@ void SchSliceBasedSliceCfgReq(SchCellCb *cellCb)
 void SchSliceBasedSliceRecfgReq(SchCellCb *cellCb)
 {
    CmLList *sliceCfg = NULLP;
-   CmLList *node = NULLP;
+   CmLList *sliceCbList = NULLP;
    CmLListCp *storedSliceCfg;
    SchSliceBasedCellCb  *schSpcCell;
    SchSliceBasedSliceCb *sliceCbNode;
@@ -317,15 +313,15 @@ void SchSliceBasedSliceRecfgReq(SchCellCb *cellCb)
    schSpcCell = (SchSliceBasedCellCb *)cellCb->schSpcCell;
    storedSliceCfg = &schCb[cellCb->instIdx].sliceCfg;
    sliceCfg = storedSliceCfg->first;
-   node = schSpcCell->sliceCbList.first;
+   sliceCbList  = schSpcCell->sliceCbList.first;
    
    while(sliceCfg)
    {
       rrmPolicyNode = (SchRrmPolicyOfSlice *)sliceCfg->node;
 
-      while(node)
+      while(sliceCbList)
       {
-         sliceCbNode = (SchSliceBasedSliceCb *)node->node;
+         sliceCbNode = (SchSliceBasedSliceCb *)sliceCbList->node;
 
          if(memcmp(&rrmPolicyNode->snssai, &sliceCbNode->snssai, sizeof(Snssai)) == 0)
          {
@@ -341,7 +337,7 @@ void SchSliceBasedSliceRecfgReq(SchCellCb *cellCb)
             break;
          }
 
-         node = node->next;
+         sliceCbList = sliceCbList->next;
       }
 
       sliceCfg = sliceCfg->next;
@@ -1342,10 +1338,6 @@ void schSliceBasedScheduleSlot(SchCellCb *cell, SlotTimingInfo *slotInd, Inst sc
 
    schSpcCell = (SchSliceBasedCellCb *)cell->schSpcCell;
    
-   if(schSpcCell->isTimerStart)
-   {
-      setRrmPolicyWithTimer(cell);
-   }
 
    /* Select first UE in the linked list to be scheduled next */
    pendingUeNode = schSpcCell->ueToBeScheduled.first;
@@ -1578,7 +1570,6 @@ uint8_t schSliceBasedFillLcInfoToSliceCb(CmLListCp *sliceCbList, SchUeCb *ueCb)
          
          lcInfoNode = lcInfoNext;
       }
-      cmLListDeleteLList(&sliceCb->lcInfoList[ueId-1]);
       
       cmLListInit(&sliceCb->lcInfoList[ueId-1]);
 
@@ -1653,22 +1644,22 @@ uint16_t schSliceBasedCalculatePriorLevel(uint16_t fiveQi)
  * ****************************************************************/
 void schSliceBasedSortLcByPriorLevel(CmLListCp *lcInfoList, float_t totalPriorLevel)
 {
-   CmLList *outerNode = NULLP, *interNode, *minPriorNode = NULLP, *tempNode; 
+   CmLList *startNode = NULLP, *interNode, *minPriorNode = NULLP, *tempNode; 
    SchSliceBasedLcInfo *outerLcInfo = NULLP, *interLcInfo = NULLP, *minPriorLcInfo = NULLP;
 
-   outerNode = lcInfoList->first;
+   startNode = lcInfoList->first;
 
-   if(!outerNode)
+   if(!startNode)
    {
       DU_LOG("\nDennis  -->  schSliceBasedSortLcByPriorLevel(): LL is empty");
       return RFAILED;
    }
    else
    {
-      while(outerNode)
+      while(startNode)
       {
-         outerLcInfo = (SchSliceBasedLcInfo *)outerNode->node;
-         interNode = outerNode;
+         outerLcInfo = (SchSliceBasedLcInfo *)startNode->node;
+         interNode = startNode;
 
          minPriorNode = interNode;
          minPriorLcInfo = (SchSliceBasedLcInfo *)minPriorNode->node;
@@ -1687,44 +1678,44 @@ void schSliceBasedSortLcByPriorLevel(CmLListCp *lcInfoList, float_t totalPriorLe
             interNode = interNode->next;
          }
 
-         if(outerNode != minPriorNode)
+         if(startNode != minPriorNode)
          {
-            /* Swapping minPriorNode and outerNode */
+            /* Swapping minPriorNode and startNode */
             tempNode = minPriorNode->next;
-            minPriorNode->next = outerNode->next;
-            outerNode->next = tempNode;
+            minPriorNode->next = startNode->next;
+            startNode->next = tempNode;
          
             if (minPriorNode->next != NULLP)
                minPriorNode->next->prev = minPriorNode;
             else
                lcInfoList->last = minPriorNode; /* ->next = NULLP means that this node is the last node */
  
-            if (outerNode->next != NULLP)
-               outerNode->next->prev = outerNode;
+            if (startNode->next != NULLP)
+               startNode->next->prev = startNode;
             else
-               lcInfoList->last = outerNode;  /* ->next = NULLP means that this node is the last node */
+               lcInfoList->last = startNode;  /* ->next = NULLP means that this node is the last node */
          
             tempNode = minPriorNode->prev;
-            minPriorNode->prev = outerNode->prev;
-            outerNode->prev = tempNode;
+            minPriorNode->prev = startNode->prev;
+            startNode->prev = tempNode;
          
             if (minPriorNode->prev != NULLP)
                minPriorNode->prev->next = minPriorNode;
             else
                lcInfoList->first = minPriorNode;  /* ->prev = NULLP means that this node is the first node */
 
-            if (outerNode->prev != NULLP)
-               outerNode->prev->next = outerNode;
+            if (startNode->prev != NULLP)
+               startNode->prev->next = startNode;
             else
-               lcInfoList->first = outerNode;  /* ->prev = NULLP means that this node is the first node */
+               lcInfoList->first = startNode;  /* ->prev = NULLP means that this node is the first node */
 
-            outerNode = minPriorNode;
+            startNode = minPriorNode;
             outerLcInfo = minPriorLcInfo;
          }
 
          /* Calculate the weight of each LC */
          outerLcInfo->weight = outerLcInfo->priorLevel / totalPriorLevel;
-         outerNode = outerNode->next;
+         startNode = startNode->next;
       }
    }
 }
@@ -4043,7 +4034,6 @@ void schSliceBasedRoundRobinAlgo(SchCellCb *cellCb, CmLListCp *ueList, CmLListCp
    SchSliceBasedCellCb  *schSpcCell;
    uint16_t ueQuantum, remainingPrb;
    
-   schSpcCell = (SchSliceBasedCellCb *)cellCb->schSpcCell;
 
    ueNode = ueList->first;
 
