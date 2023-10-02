@@ -1587,6 +1587,14 @@ uint32_t calculateEstimateTBSize(uint32_t reqBO, uint16_t mcsIdx, uint8_t numSym
 
    *estPrb = MIN_PRB;
    /*Loop Exit: Either estPRB reaches the maxRB or TBS is found greater than equal to reqBO*/
+   if(maxPRB == 1)
+   {
+      tbs = schCalcTbSizeFromNPrb(*estPrb, mcsIdx, numSymbols);
+      tbs = tbs >> 3;
+      effecBO = MIN(tbs,reqBO);
+      return (effecBO);
+   }
+   
    do
    {
       tbs = schCalcTbSizeFromNPrb(*estPrb, mcsIdx, numSymbols);
