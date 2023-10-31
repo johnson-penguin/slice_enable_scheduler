@@ -199,7 +199,7 @@ void SchSliceBasedModUeConfigReq(SchUeCb *ueCb)
  * @return void
  *
  * ****************************************************************/
-void SchSliceBasedSliceCfgReq(SchCellCb *cellCb)
+void SchSliceBasedSliceCfgReq(SchCellCb *(&schCb[cellCb->instIdx].sliceCfg))
 {
    CmLList *sliceCfg = NULLP;
    CmLListCp *storedSliceCfg;
@@ -1153,7 +1153,7 @@ uint8_t schSliceBasedScheduleUlLc(SlotTimingInfo dciTime, SlotTimingInfo puschTi
  *
  *    Function : schSliceBasedScheduleDlLc 
  *
- *    Functionality: Grants resources to LC in uplink
+ *    Functionality: Grants resources to LC in downlink
  *
  * @params[in] PDCCH Time
  *
@@ -1429,7 +1429,9 @@ void schSliceBasedScheduleSlot(SchCellCb *cell, SlotTimingInfo *slotInd, Inst sc
             {
                /* DL Data ReTransmisson */
                isDlMsgPending = true;
-               isDlMsgScheduled = schFillBoGrantDlSchedInfo(cell, *slotInd, ueId, TRUE, ((SchDlHqProcCb**) &(node->node)));
+               //isDlMsgScheduled = schFillBoGrantDlSchedInfo(cell, *slotInd, ueId, TRUE, ((SchDlHqProcCb**) &(node->node)));
+               isDlMsgScheduled = schSliceBasedDlScheduling(cell, *slotInd, ueId, TRUE, ((SchDlHqProcCb**) &(node->node)));
+
                if(isDlMsgScheduled)
                {
 #ifdef NR_DRX 
@@ -1895,7 +1897,11 @@ bool schSliceBasedDlScheduling(SchCellCb *cell, SlotTimingInfo currTime, uint8_t
       return false;
    }
 
-   /* [Step3]: Allocate the memory to PDSCH and PDCCH allocation result of this UE */
+   /* [Step3]: Search the largest free PRB block to do the scheduling */
+   maxFreePRB = searchLargestFreeBlock(ueNewHarqList[ueId-1]->hqEnt->cell, pdschTime, &startPrb, DIR_DL);
+   totalRemainingPrb = maxFreePRB;
+
+   /* [Step4]: Allocate the memory to PDSCH and PDCCH allocation result of this UE */
    if(cell->schDlSlotInfo[pdcchTime.slot]->dlMsgAlloc[ueId-1] == NULL)
    {
       SCH_ALLOC(dciSlotAlloc, sizeof(DlMsgSchInfo));
@@ -1910,12 +1916,6 @@ bool schSliceBasedDlScheduling(SchCellCb *cell, SlotTimingInfo currTime, uint8_t
 
    schSpcCell = (SchSliceBasedCellCb *)cell->schSpcCell;
    sliceCbNode = schSpcCell->sliceCbList.first;
-
-   /* [Step4]: Search the largest free PRB block to do the scheduling */
-   maxFreePRB = searchLargestFreeBlock(ueNewHarqList[ueId-1]->hqEnt->cell, pdschTime, &startPrb, DIR_DL);
-   totalRemainingPrb = maxFreePRB;
-
-
    if(maxFreePRB == 0)
    {
       memset(dciSlotAlloc, 0, sizeof(DlMsgSchInfo));
@@ -1979,7 +1979,7 @@ bool schSliceBasedDlScheduling(SchCellCb *cell, SlotTimingInfo currTime, uint8_t
 #endif
 
    }  
-
+   
    /*  [Step7]: Run the final scheduling to allocate the remaining resource
     *  and fill the scheduling result */
    if(schSliceBasedDlFinalScheduling(cell, pdschTime, pdcchTime, pucchTime, pdschStartSymbol, pdschNumSymbols, &ueDlNewTransmission, isRetx, ueNewHarqList, totalRemainingPrb, startPrb) != ROK)
@@ -1993,6 +1993,7 @@ bool schSliceBasedDlScheduling(SchCellCb *cell, SlotTimingInfo currTime, uint8_t
 
    return true;
 }
+
 
 /*******************************************************************
  *
@@ -2040,6 +2041,7 @@ uint8_t schSliceBasedDlIntraSliceScheduling(SchCellCb *cellCb, SlotTimingInfo pd
    DlMsgSchInfo *dciSlotAlloc;
    float_t totalUeWeight = 0;
    SchSliceBasedUeCb *ueSliceBasedCb = NULLP;
+   SchSliceCfgReq
 
    /* [Step1]: Calculate the slice PRB quota according to RRMPolicyRatio and MaxFreePRB */
    sliceCb->dedicatedPrb = (uint16_t)(((sliceCb->rrmPolicyRatioInfo.dedicatedRatio)*(maxFreePRB))/100);
@@ -2258,6 +2260,7 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
    uint32_t accumalatedSize = 0;
    uint16_t numPRB = 0;
    SchUeCb *ueCb = NULLP;
+   SchRrmPolicyOfSlice *rrmPolicyNode;
    DlMsgSchInfo *dciSlotAlloc, *dlMsgAlloc;
    SchSliceBasedCellCb *schSpcCell = NULLP;
    CmLList *sliceCbNode = NULLP;
@@ -2265,6 +2268,8 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
    CmLListCp defLcList;
    SchSliceBasedSliceCb *sliceCb = NULLP;
    SchSliceBasedUeCb *ueSliceBasedCb = NULLP;
+   
+   rrmPolicyNode = (SchRrmPolicyOfSlice *)sliceCfg->node;
 
 #ifdef SLICE_BASED_DEBUG_LOG  
    DU_LOG("\n\n===============DEBUG  -->  SCH Final : Start to run final-scheduling [Remaining PRB is:%d]===============", remainingPrb);
@@ -2288,7 +2293,8 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
             /* Allocate the remaining PRB to default slice */
             for(lcIdx = 0; lcIdx < MAX_NUM_LC; lcIdx++)
             {
-               if(ueCb->dlInfo.dlLcCtxt[lcIdx].snssai == NULLP && ueCb->dlInfo.dlLcCtxt[lcIdx].bo != 0)
+               if((ueCb->dlInfo.dlLcCtxt[lcIdx].snssai == NULLP && ueCb->dlInfo.dlLcCtxt[lcIdx].bo != 0)\
+                  ||((ueCb->dlInfo.dlLcCtxt[lcIdx].snssai != NULLP) && (ueCb->dlInfo.dlLcCtxt[lcIdx].snssai != schSliceCfgReq->listOfSlices[lcIdx]->snssai)))
                {
                   /* Update the reqPRB and Payloadsize for this LC in the appropriate List */
                   if(updateLcListReqPRB(&defLcList, ueCb->dlInfo.dlLcCtxt[lcIdx].lcId,\
@@ -4311,4 +4317,3 @@ void schSliceBasedAllApisInit(SchAllApis *allSliceBasedApi)
 /**********************************************************************
     End of file
 **********************************************************************/
-

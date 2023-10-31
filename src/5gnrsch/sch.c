@@ -1960,13 +1960,13 @@ uint8_t fillSliceRecfgRsp(Inst inst, CmLListCp *storedSliceCfg, SchSliceRecfgReq
    uint8_t cfgIdx = 0;
    SchRrmPolicyOfSlice *rrmPolicyOfSlices;
    SchSliceRecfgRsp schSliceRecfgRsp;
-
+   SchCellCb *cellCb;
    for(cfgIdx = 0; cfgIdx<schSliceRecfgReq->numOfConfiguredSlice; cfgIdx++)
    {
       sliceFound = RSP_NOK;
       /* Here comparing the slice recfg request with the StoredSliceCfg */
       CmLList *sliceCfg = storedSliceCfg->first;
-
+s
       while(sliceCfg)
       {
          rrmPolicyOfSlices = (SchRrmPolicyOfSlice*)sliceCfg->node;
@@ -1974,9 +1974,14 @@ uint8_t fillSliceRecfgRsp(Inst inst, CmLListCp *storedSliceCfg, SchSliceRecfgReq
          if(rrmPolicyOfSlices && (memcmp(&schSliceRecfgReq->listOfSlices[cfgIdx]->snssai, &(rrmPolicyOfSlices->snssai), sizeof(Snssai)) == 0))
          {
             memcpy(&rrmPolicyOfSlices->rrmPolicyRatioInfo, &schSliceRecfgReq->listOfSlices[cfgIdx]->rrmPolicyRatioInfo, sizeof(SchRrmPolicyRatio));
+         }
+         else
+         {
+            cellCb->api->SchSliceRecfgReq(cellCb);
+         }   
             sliceFound = RSP_OK;
             break;
-         }
+         
          sliceCfg = sliceCfg->next;
       }
 
@@ -2026,10 +2031,7 @@ uint8_t SchProcSliceRecfgReq(Pst *pst, SchSliceRecfgReq *schSliceRecfgReq)
             DU_LOG("\nERROR  -->  SCH : Failed to fill sch slice cfg response");
             ret = RFAILED;
          }
-         else
-         {
-            cellCb->api->SchSliceRecfgReq(cellCb);
-         }
+
          freeSchSliceCfgReq(schSliceRecfgReq);
       }
    }
