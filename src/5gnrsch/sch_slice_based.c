@@ -1920,7 +1920,7 @@ bool schSliceBasedDlScheduling(SchCellCb *cell, SlotTimingInfo currTime, uint8_t
    {
       memset(dciSlotAlloc, 0, sizeof(DlMsgSchInfo));
        /* No available resources remaining */
-      return false
+      return false;
    }   
 
 
@@ -2041,7 +2041,7 @@ uint8_t schSliceBasedDlIntraSliceScheduling(SchCellCb *cellCb, SlotTimingInfo pd
    DlMsgSchInfo *dciSlotAlloc;
    float_t totalUeWeight = 0;
    SchSliceBasedUeCb *ueSliceBasedCb = NULLP;
-   SchSliceCfgReq
+   
 
    /* [Step1]: Calculate the slice PRB quota according to RRMPolicyRatio and MaxFreePRB */
    sliceCb->dedicatedPrb = (uint16_t)(((sliceCb->rrmPolicyRatioInfo.dedicatedRatio)*(maxFreePRB))/100);
@@ -2083,14 +2083,7 @@ uint8_t schSliceBasedDlIntraSliceScheduling(SchCellCb *cellCb, SlotTimingInfo pd
          schSliceBasedRoundRobinAlgo(cellCb, ueDlNewTransmission, sliceCb->lcInfoList, \
                                     pdschNumSymbols, &remainingPrb, sliceCb->algoMethod, NULLP);
       }
-
-      /* Get the allocated PRB after scheduling algorithm */
-      sliceCb->allocatedPrb = minimumPrb - remainingPrb;
-
-#ifdef SLICE_BASED_DEBUG_LOG
-      DU_LOG("\nDennis  -->  SCH Intra-Slice Result : [SST: %d, Allocated PRB: %d, Unallocated PRB: %d, Algo: RR]", sliceCb->snssai.sst, \
-               sliceCb->allocatedPrb, remainingPrb);
-
+      
       else if (sliceCb->algorithm == WFQ)
       {
          /* Sort the UE list in terms of the weight */
@@ -2107,6 +2100,9 @@ uint8_t schSliceBasedDlIntraSliceScheduling(SchCellCb *cellCb, SlotTimingInfo pd
       DU_LOG("\nDennis  -->  SCH Intra-Slice Result : [SST: %d, Allocated PRB: %d, Unallocated PRB: %d, Algo: WFQ]", sliceCb->snssai.sst, \
                sliceCb->allocatedPrb, remainingPrb);      
 #endif
+   }
+
+
    else
    {
       DU_LOG("\nDennis  -->  In schSliceBasedDlIntraSliceScheduling() : Invalid Scheduling Algorithm");
@@ -2252,9 +2248,11 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
                                        CmLListCp *ueDlNewTransmission, bool isRetx, SchDlHqProcCb **ueNewHarqList, \
                                        uint16_t remainingPrb, uint16_t startPrb)
 {  
-   uint8_t lcIdx = 0;
+   CmLList *sliceCfg = NULLP;
+   CmLListCp *storedSliceCfg;
    uint16_t mcsIdx = 0;
    uint16_t crnti = 0;
+   uint8_t lcIdx;
    uint8_t  ueId;
    uint16_t availablePrb = 0;
    uint32_t accumalatedSize = 0;
@@ -2268,7 +2266,9 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
    CmLListCp defLcList;
    SchSliceBasedSliceCb *sliceCb = NULLP;
    SchSliceBasedUeCb *ueSliceBasedCb = NULLP;
-   
+   storedSliceCfg = &schCb[cellCb->instIdx].sliceCfg;
+   sliceCfg = storedSliceCfg->first;
+
    rrmPolicyNode = (SchRrmPolicyOfSlice *)sliceCfg->node;
 
 #ifdef SLICE_BASED_DEBUG_LOG  
@@ -2337,6 +2337,7 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
    while(sliceCbNode)
    {
       if(isRetx == FALSE)
+      {
 
          sliceCb = (SchSliceBasedSliceCb *)sliceCbNode->node;
 
@@ -2404,12 +2405,15 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
             DU_LOG("\nERROR  -->  In schSliceBasedDlFinalScheduling() : Invalid Scheduling Algorithm");
             return;
          }
+
+         
    #ifdef SLICE_BASED_DEBUG_LOG
          DU_LOG("\nDEBUG  -->  SCH Final Scheduling Result : [SST: %d, Allocated PRB: %d, Remaining PRB: %d]", \
                sliceCb->snssai.sst, sliceCb->allocatedPrb, remainingPrb);
    #endif
-
          sliceCbNode = sliceCbNode->next;
+      
+      }
       else
       {
          continue;
@@ -4001,7 +4005,7 @@ void schSliceBasedRoundRobinAlgo(SchCellCb *cellCb, CmLListCp *ueList, CmLListCp
       while(lcNode)
       {
          next = lcNode->next;
-         cmLListDelFrm(casLcInfoList, lcNode) 
+         cmLListDelFrm(casLcInfoList, lcNode);
          SCH_FREE(lcNode, sizeof(CmLList));
          lcNode = next;
       }
@@ -4129,7 +4133,7 @@ void schSliceBasedWeightedFairQueueAlgo(SchCellCb *cellCb, CmLListCp *ueList, Cm
       while(lcNode)
       {
          next = lcNode->next;
-         cmLListDelFrm(casLcInfoList, lcNode)
+         cmLListDelFrm(casLcInfoList, lcNode);
          SCH_FREE(lcNode, sizeof(CmLList));
          lcNode = next;
       }
