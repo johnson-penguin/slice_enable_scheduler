@@ -199,7 +199,7 @@ void SchSliceBasedModUeConfigReq(SchUeCb *ueCb)
  * @return void
  *
  * ****************************************************************/
-void SchSliceBasedSliceCfgReq(SchCellCb *(&schCb[cellCb->instIdx].sliceCfg))
+void SchSliceBasedSliceCfgReq(SchCellCb *schCb)
 {
    CmLList *sliceCfg = NULLP;
    CmLListCp *storedSliceCfg;
@@ -2185,9 +2185,7 @@ void *schSliceBasedDlIntraSliceThreadScheduling(void *threadArg)
          sliceCb = dlThreadArg->sliceCb;
          ueDlNewTransmission = dlThreadArg->ueDlNewTransmission;
          
-         schSliceBasedDlIntraSliceScheduling(SchCellCb *cellCb, SlotTimingInfo pdcchTime, uint8_t pdschNumSymbols, \
-                                            CmLListCp *ueDlNewTransmission, uint16_t maxFreePRB, uint16_t *totalRemainingPrb,\
-                                            SchSliceBasedSliceCb *sliceCb)
+         schSliceBasedDlIntraSliceScheduling(cellCb, pdcchTime, pdschNumSymbols, ueDlNewTransmission, maxFreePRB, totalRemainingPrb,sliceCb)
 
              
          
@@ -2293,8 +2291,7 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
             /* Allocate the remaining PRB to default slice */
             for(lcIdx = 0; lcIdx < MAX_NUM_LC; lcIdx++)
             {
-               if((ueCb->dlInfo.dlLcCtxt[lcIdx].snssai == NULLP && ueCb->dlInfo.dlLcCtxt[lcIdx].bo != 0)\
-                  ||((ueCb->dlInfo.dlLcCtxt[lcIdx].snssai != NULLP) && (ueCb->dlInfo.dlLcCtxt[lcIdx].snssai != schSliceCfgReq->listOfSlices[lcIdx]->snssai)))
+               if((ueCb->dlInfo.dlLcCtxt[lcIdx].snssai == NULLP && ueCb->dlInfo.dlLcCtxt[lcIdx].bo != 0))
                {
                   /* Update the reqPRB and Payloadsize for this LC in the appropriate List */
                   if(updateLcListReqPRB(&defLcList, ueCb->dlInfo.dlLcCtxt[lcIdx].lcId,\
