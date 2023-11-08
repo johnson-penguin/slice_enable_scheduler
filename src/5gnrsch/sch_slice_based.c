@@ -199,7 +199,7 @@ void SchSliceBasedModUeConfigReq(SchUeCb *ueCb)
  * @return void
  *
  * ****************************************************************/
-void SchSliceBasedSliceCfgReq(SchCellCb *schCb)
+void SchSliceBasedSliceCfgReq(SchCellCb *cellCb)
 {
    CmLList *sliceCfg = NULLP;
    CmLListCp *storedSliceCfg;
@@ -324,11 +324,11 @@ void SchSliceBasedSliceRecfgReq(SchCellCb *cellCb)
    
    while(sliceCfg)
    {
-      rrmPolicyNode = (SchRrmPolicyOfSlice *)sliceCfg->sliceCbList;
+      rrmPolicyNode = (SchRrmPolicyOfSlice *)sliceCfg->node;
 
       while(sliceCbList)
       {
-         sliceCbNode = (SchSliceBasedSliceCb *)sliceCbList->sliceCbList;
+         sliceCbNode = (SchSliceBasedSliceCb *)sliceCbList->node;
 
          if(memcmp(&rrmPolicyNode->snssai, &sliceCbNode->snssai, sizeof(Snssai)) == 0)
          {
@@ -1429,9 +1429,7 @@ void schSliceBasedScheduleSlot(SchCellCb *cell, SlotTimingInfo *slotInd, Inst sc
             {
                /* DL Data ReTransmisson */
                isDlMsgPending = true;
-               //isDlMsgScheduled = schFillBoGrantDlSchedInfo(cell, *slotInd, ueId, TRUE, ((SchDlHqProcCb**) &(node->node)));
-               isDlMsgScheduled = schSliceBasedDlScheduling(cell, *slotInd, ueId, TRUE, ((SchDlHqProcCb**) &(node->node)));
-
+               isDlMsgScheduled = schFillBoGrantDlSchedInfo(cell, *slotInd, ueId, TRUE, ((SchDlHqProcCb**) &(node->node)));
                if(isDlMsgScheduled)
                {
 #ifdef NR_DRX 
@@ -1447,7 +1445,7 @@ void schSliceBasedScheduleSlot(SchCellCb *cell, SlotTimingInfo *slotInd, Inst sc
                {
                   isDlMsgPending = true;
                   //isDlMsgScheduled = schFillBoGrantDlSchedInfo(cell, *slotInd, ueId, FALSE, &hqP);
-                  isDlMsgScheduled = schSliceBasedDlScheduling(cell, *slotInd, ueId, FALSE, &hqP);
+                  isDlMsgScheduled = schSliceBasedDlScheduling(cell, *slotInd, ueId, TRUE, ((SchDlHqProcCb**) &(node->node)));
 
                   /* If DL scheduling failed, free the newly assigned HARQ process */
                   if(!isDlMsgScheduled)
@@ -1993,8 +1991,6 @@ bool schSliceBasedDlScheduling(SchCellCb *cell, SlotTimingInfo currTime, uint8_t
 
    return true;
 }
-
-
 /*******************************************************************
  *
  * @brief a. Allocate the dedicated resource and prioritized resource for this slice
@@ -2041,7 +2037,6 @@ uint8_t schSliceBasedDlIntraSliceScheduling(SchCellCb *cellCb, SlotTimingInfo pd
    DlMsgSchInfo *dciSlotAlloc;
    float_t totalUeWeight = 0;
    SchSliceBasedUeCb *ueSliceBasedCb = NULLP;
-   
 
    /* [Step1]: Calculate the slice PRB quota according to RRMPolicyRatio and MaxFreePRB */
    sliceCb->dedicatedPrb = (uint16_t)(((sliceCb->rrmPolicyRatioInfo.dedicatedRatio)*(maxFreePRB))/100);
@@ -2083,7 +2078,7 @@ uint8_t schSliceBasedDlIntraSliceScheduling(SchCellCb *cellCb, SlotTimingInfo pd
          schSliceBasedRoundRobinAlgo(cellCb, ueDlNewTransmission, sliceCb->lcInfoList, \
                                     pdschNumSymbols, &remainingPrb, sliceCb->algoMethod, NULLP);
       }
-      
+
       else if (sliceCb->algorithm == WFQ)
       {
          /* Sort the UE list in terms of the weight */
@@ -2101,8 +2096,6 @@ uint8_t schSliceBasedDlIntraSliceScheduling(SchCellCb *cellCb, SlotTimingInfo pd
                sliceCb->allocatedPrb, remainingPrb);      
 #endif
    }
-
-
    else
    {
       DU_LOG("\nDennis  -->  In schSliceBasedDlIntraSliceScheduling() : Invalid Scheduling Algorithm");
@@ -2185,7 +2178,9 @@ void *schSliceBasedDlIntraSliceThreadScheduling(void *threadArg)
          sliceCb = dlThreadArg->sliceCb;
          ueDlNewTransmission = dlThreadArg->ueDlNewTransmission;
          
-         schSliceBasedDlIntraSliceScheduling(cellCb, pdcchTime, pdschNumSymbols, ueDlNewTransmission, maxFreePRB, totalRemainingPrb,sliceCb)
+         
+
+         schSliceBasedDlIntraSliceScheduling(cellCb, pdcchTime, pdschNumSymbols, ueDlNewTransmission, maxFreePRB, totalRemainingPrb, sliceCb);
 
              
          
@@ -2269,6 +2264,7 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
 
    rrmPolicyNode = (SchRrmPolicyOfSlice *)sliceCfg->node;
 
+
 #ifdef SLICE_BASED_DEBUG_LOG  
    DU_LOG("\n\n===============DEBUG  -->  SCH Final : Start to run final-scheduling [Remaining PRB is:%d]===============", remainingPrb);
 #endif
@@ -2291,7 +2287,7 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
             /* Allocate the remaining PRB to default slice */
             for(lcIdx = 0; lcIdx < MAX_NUM_LC; lcIdx++)
             {
-               if((ueCb->dlInfo.dlLcCtxt[lcIdx].snssai == NULLP && ueCb->dlInfo.dlLcCtxt[lcIdx].bo != 0))
+               if(ueCb->dlInfo.dlLcCtxt[lcIdx].snssai == NULLP && ueCb->dlInfo.dlLcCtxt[lcIdx].bo != 0)
                {
                   /* Update the reqPRB and Payloadsize for this LC in the appropriate List */
                   if(updateLcListReqPRB(&defLcList, ueCb->dlInfo.dlLcCtxt[lcIdx].lcId,\
@@ -2335,7 +2331,6 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
    {
       if(isRetx == FALSE)
       {
-
          sliceCb = (SchSliceBasedSliceCb *)sliceCbNode->node;
 
          /* [Step3]: Run the scheduling algorithm assigned to this slice */
@@ -2402,14 +2397,12 @@ uint8_t schSliceBasedDlFinalScheduling(SchCellCb *cellCb, SlotTimingInfo pdschTi
             DU_LOG("\nERROR  -->  In schSliceBasedDlFinalScheduling() : Invalid Scheduling Algorithm");
             return;
          }
-
-         
    #ifdef SLICE_BASED_DEBUG_LOG
          DU_LOG("\nDEBUG  -->  SCH Final Scheduling Result : [SST: %d, Allocated PRB: %d, Remaining PRB: %d]", \
                sliceCb->snssai.sst, sliceCb->allocatedPrb, remainingPrb);
    #endif
+
          sliceCbNode = sliceCbNode->next;
-      
       }
       else
       {
@@ -4002,7 +3995,7 @@ void schSliceBasedRoundRobinAlgo(SchCellCb *cellCb, CmLListCp *ueList, CmLListCp
       while(lcNode)
       {
          next = lcNode->next;
-         cmLListDelFrm(casLcInfoList, lcNode);
+         cmLListDelFrm(&casLcInfoList, lcNode);
          SCH_FREE(lcNode, sizeof(CmLList));
          lcNode = next;
       }
@@ -4130,7 +4123,7 @@ void schSliceBasedWeightedFairQueueAlgo(SchCellCb *cellCb, CmLListCp *ueList, Cm
       while(lcNode)
       {
          next = lcNode->next;
-         cmLListDelFrm(casLcInfoList, lcNode);
+         cmLListDelFrm(&casLcInfoList, lcNode);
          SCH_FREE(lcNode, sizeof(CmLList));
          lcNode = next;
       }
@@ -4318,3 +4311,4 @@ void schSliceBasedAllApisInit(SchAllApis *allSliceBasedApi)
 /**********************************************************************
     End of file
 **********************************************************************/
+

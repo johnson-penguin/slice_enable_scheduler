@@ -774,10 +774,10 @@ uint16_t fiveQiTable[MAX_5QI_TABLE_IDX][3] = {
       {2,   0,   40},
       {3,   0,   30},
       {4,   0,   50},
-      {65,  0,    7},
+      {65,  0,   7},
       {66,  0,   20},
       {67,  0,   15},
-      {75,  0,    0}, /* 5QI Value = 75 doesn't define default priority level */
+      {75,  0,   0}, /* 5QI Value = 75 doesn't define default priority level */
       {71,  0,   56},
       {72,  0,   56},
       {73,  0,   56},
@@ -788,7 +788,7 @@ uint16_t fiveQiTable[MAX_5QI_TABLE_IDX][3] = {
       {7,   1,   70},
       {8,   1,   80},
       {9,   1,   90},
-      {69,  1,    5},
+      {69,  1,   5},
       {70,  1,   55},
       {79,  1,   65},
       {80,  1,   68},
