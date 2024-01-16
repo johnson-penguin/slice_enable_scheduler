@@ -766,6 +766,8 @@ uint8_t pucchResourceSet[MAX_PUCCH_RES_SET_IDX][4] = {
 };
 
 /* QoS Configuration */
+/* 5QI value and Table Index Mapping */
+uint16_t fiveQiIdxTable[MAX_5QI_TABLE_IDX] = {1, 2, 3, 4, 65, 66, 67, 75, 71, 72, 73, 74, 76, 5, 6, 7, 8, 9, 69, 70, 79, 80, 82, 83, 84, 85, 86};
 
 /* 3GPP TS 23.501 Table 5.7.4-1: Standardized 5QI to QoS characteristics mapping */
 /* Resource type(0 = GBR, 1 = Non-GBR, 2 = delay critical GBR) ,  Default Priority Level */
@@ -798,8 +800,6 @@ uint16_t fiveQiTable[MAX_5QI_TABLE_IDX][3] = {
       {85,  2,   21},
       {86,  2,   18}
 };
-
-
 /* Minimum Msg3 scheduling time should be calculated based on N1+N2+NTAmax+0.5
  * ms formula.
  * Refer spec 38.213 section 8.3.
@@ -1586,7 +1586,6 @@ uint32_t calculateEstimateTBSize(uint32_t reqBO, uint16_t mcsIdx, uint8_t numSym
 
    *estPrb = MIN_PRB;
    /*Loop Exit: Either estPRB reaches the maxRB or TBS is found greater than equal to reqBO*/
-   
    do
    {
       tbs = schCalcTbSizeFromNPrb(*estPrb, mcsIdx, numSymbols);

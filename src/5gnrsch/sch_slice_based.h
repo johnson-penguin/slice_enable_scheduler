@@ -18,7 +18,7 @@
 
 // #define SCH_MULTI_THREAD      /* Enable the multi-thread intra-slice scheduling feature */
 // #define SLICE_BASED_DEBUG_LOG    /* Enable the debug log */
-#define NUM_SLICE 3     /* Define the number of slices for multi thread feature */
+#define NUM_SLICE 2     /* Define the number of slices for multi thread feature */
 
 typedef enum
 {
@@ -152,6 +152,8 @@ void schSliceBasedSortUeByWeight(SchCellCb *cellCb, CmLListCp *ueList, float_t t
 uint8_t schSliceBasedUpdateLcListReqBo(CmLListCp *lcInfoList, SchUeCb *ueCb, Direction dir);
 void schSliceBasedUpdateGrantSizeForBoRpt(CmLListCp *lcLL, DlMsgSchInfo *dlMsgAlloc,\
                                     BsrInfo *bsrInfo, uint32_t *accumalatedBOSize, bool isDedicated);
+uint32_t calculateEstimateTBSize(uint32_t reqBO, uint16_t mcsIdx, uint8_t numSymbols,\
+                                   uint16_t maxPRB, uint16_t *estPrb);                                  
 
 /* DL Slice-Based Main Function */
 bool schSliceBasedDlScheduling(SchCellCb *cell, SlotTimingInfo currTime, uint8_t ueId, bool isRetx, SchDlHqProcCb **hqP);
@@ -185,7 +187,7 @@ void schSliceBasedRoundRobinAlgoforLc(CmLListCp *lcInfoList, uint8_t numSymbols,
                                        bool *isTxPayloadLenAdded, bool *srRcvd);
 void schSliceBasedWeightedFairQueueAlgoforLc(CmLListCp *lcInfoList, uint8_t numSymbols, uint16_t *availablePrb, \
                                        bool *isTxPayloadLenAdded, bool *srRcvd);
-void schSliceBasedPrbAllocUsingRRMPolicy(CmLListCp *lcInfoList, uint16_t mcsIdx, uint8_t numSymbols, \
+void SliceBasedPrbAllocDefaultSlice(CmLListCp *lcInfoList, uint16_t mcsIdx, uint8_t numSymbols, \
                                           uint16_t *availablePrb, bool *isTxPayloadLenAdded, bool *srRcvd);
 
 /* For experiment */
